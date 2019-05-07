@@ -156,8 +156,8 @@
   </avrgcc.linker.libraries.Libraries>
   <avrgcc.linker.libraries.LibrarySearchPaths>
     <ListValues>
-      <Value>../../../../../../Stdio_lib</Value>
       <Value>../../../../../..</Value>
+      <Value>../Lib_files/Stdio_lib</Value>
     </ListValues>
   </avrgcc.linker.libraries.LibrarySearchPaths>
   <avrgcc.linker.miscellaneous.LinkerFlags>-Wl,-u,vfprintf</avrgcc.linker.miscellaneous.LinkerFlags>
