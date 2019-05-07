@@ -35,7 +35,8 @@ main.d main.o: .././main.c \
  ../VIA_FreeRTOS_AVRMEGA-master/src/queue.h \
  ../VIA_FreeRTOS_AVRMEGA-master/src/serial/serial.h \
  ../VIA_FreeRTOS_AVRMEGA-master/src/hih8120.h \
- ../VIA_FreeRTOS_AVRMEGA-master/src/mh_z19.h
+ ../VIA_FreeRTOS_AVRMEGA-master/src/mh_z19.h \
+ ../VIA_FreeRTOS_AVRMEGA-master/src/tsl2591.h
 
 ../VIA_FreeRTOS_AVRMEGA-master/src/ATMEGA_FreeRTOS.h:
 
@@ -110,3 +111,5 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\
 ../VIA_FreeRTOS_AVRMEGA-master/src/hih8120.h:
 
 ../VIA_FreeRTOS_AVRMEGA-master/src/mh_z19.h:
+
+../VIA_FreeRTOS_AVRMEGA-master/src/tsl2591.h:
