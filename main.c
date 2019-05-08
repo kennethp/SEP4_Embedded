@@ -23,8 +23,8 @@
 
 //highest priority
 #define LED_TASK_PRIORITY   (configMAX_PRIORITIES - 1)
-#define LORA_appEUI ""
-#define LORA_appKEY ""
+#define LORA_appEUI "c53e8f9f10801fc4"
+#define LORA_appKEY "018cc25f724a8517cbfd763dc1126614"
 //
 #define TEMP_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 #define CO2_TASK_PRIORITY (configMAX_PRIORITIES - 3)
@@ -46,6 +46,8 @@ float light;
 int water;
 
 char _out_buff[100];
+
+//this is the connection keys.
  
 
 void tempSensorTask(void* pvParameters) {
@@ -145,32 +147,7 @@ void waterTask(void* pvParamters) {
 
 //added:
 
-void loRaWanTask(void* pvParamters){	
 
-	//for resetting the LoRaWAN hardware.
-	lora_driver_reset_rn2483(1);
-	vTaskDelay(2);
-	lora_driver_reset_rn2483(0);
-	vTaskDelay(150);
-	lora_driver_flush_buffers();
-	
-	_loRa_setup();
-	
-	lora_payload_t _uplink_payload;
-	
-	_uplink_payload.len = 6;
-	_uplink_payload.port_no = 2;
-	
-		
-	while(1){
-		
-		vTaskDelay(pdMS_TO_TICKS(5000UL));
-		
-	
-	}
-	
-	vTaskDelete(NULL);
-}
 
 void _loRa_setup(void){
 	
@@ -221,6 +198,42 @@ void _loRa_setup(void){
 	} while (--maxJoinTriesLeft);
 
 }
+
+void loRaWanTask(void* pvParamters){
+
+	//for resetting the LoRaWAN hardware.
+	lora_driver_reset_rn2483(1);
+	vTaskDelay(2);
+	lora_driver_reset_rn2483(0);
+	vTaskDelay(150);
+	lora_driver_flush_buffers();
+	
+	_loRa_setup();
+	vTaskDelay(pdMS_TO_TICKS(200UL));
+	
+	lora_payload_t _uplink_payload;
+	
+	_uplink_payload.len = 6;
+	_uplink_payload.port_no = 5;
+	
+	
+	while(1){
+		
+		vTaskDelay(pdMS_TO_TICKS(5000UL));
+		
+		_uplink_payload.bytes[0] = humidity;
+		_uplink_payload.bytes[1] = temperature;
+		_uplink_payload.bytes[2] = co2 >> 8;
+		_uplink_payload.bytes[3] = co2 & 0xFF;
+		_uplink_payload.bytes[4] = light;
+		_uplink_payload.bytes[5] = water;
+		
+		printf("Upload Message >%s<\n", lora_driver_map_return_code_to_text(lora_driver_sent_upload_message(false, &_uplink_payload)));
+		
+	}
+	
+	vTaskDelete(NULL);
+}
 	
 //
 
@@ -230,14 +243,13 @@ int main() {
 	lora_driver_create(ser_USART1);
 	stdioCreate(0);
 	sei();
-	DDRC = 0xFF;
-	_delay_ms(50);
-	PORTC = 0x01;
+
 	
 	xTaskCreate(tempSensorTask, "Temperature measurement", configMINIMAL_STACK_SIZE, NULL, TEMP_TASK_PRIORITY, &tempSensorHandle);
 	xTaskCreate(co2SensorTask, "CO2 measurement", configMINIMAL_STACK_SIZE, NULL, CO2_TASK_PRIORITY, &co2SensorHandle);
 	xTaskCreate(lightSensorTask, "Light measurement", configMINIMAL_STACK_SIZE, NULL, LIGHT_TASK_PRIORITY, &lightSensorHandle);
 	xTaskCreate(waterTask, "Water servo", configMINIMAL_STACK_SIZE, NULL, WATER_TASK_PRIORITY, &WaterHandle);
+	
 	//added:
 	xTaskCreate(loRaWanTask, "Led", configMINIMAL_STACK_SIZE, NULL,LED_TASK_PRIORITY, &loRaWanHandle);
 	//
