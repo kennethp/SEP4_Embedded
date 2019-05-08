@@ -17,23 +17,41 @@
 #include "mh_z19.h"
 #include "serial/serial.h"
 #include "tsl2591.h"
+//added
+#include <ihal.h>
+#include <lora_driver.h>
 
+#define LED_TASK_PRIORITY   (tskIDLE_PRIORITY + 5)
+#define LORA_appEUI ""
+#define LORA_appKEY ""
+//
 #define TEMP_TASK_PRIORITY (tskIDLE_PRIORITY + 5)
 #define CO2_TASK_PRIORITY (tskIDLE_PRIORITY + 5)
 #define LIGHT_TASK_PRIORITY (tskIDLE_PRIORITY + 5)
 #define WATER_TASK_PRIORITY (tskIDLE_PRIORITY + 5)
 
+
 TaskHandle_t tempSensorHandle = NULL;
 TaskHandle_t co2SensorHandle = NULL;
 TaskHandle_t lightSensorHandle = NULL;
 TaskHandle_t WaterHandle = NULL;
+//add:
+TaskHandle_t ledHandle = NULL;//
 
 int temperature;
 int humidity;
 uint16_t co2;
 float light;
 int water;
+//added:
+void hal_create(uint8_t led_task_priority);
+void lora_driver_create(e_com_port_t com_port);
+void lora_driver_reset_rn2483(uint8_t state);
+void lora_driver_flush_buffers(void);
 
+
+
+//
 
 void tempSensorTask(void* pvParameters) {
 	(void)pvParameters;
@@ -131,7 +149,38 @@ void waterTask(void* pvParamters) {
 }
 
 
+//added:
+
+void lora_driver_get_rn2483_hweui(char dev_eui);
+void settingLoraTask(void* pvParamters){
+UnknownType LoRA_OK;
+	
+	static char dev_eui[17]; // It is static to avoid it to occupy stack space in the task
+	if (lora_driver_get_rn2483_hweui(dev_eui); != LoRA_OK)
+	{
+		printf("something went wrong\n");
+	}
+	else{
+		printf("temp-wake error: %d\n", dev_eui);
+
+	}
+	while(1){
+		lora_driver_reset_rn2483(1);
+		vTaskDelay(2);
+		lora_driver_reset_rn2483(0);
+		vTaskDelay(150);
+		lora_driver_flush_buffers();
+	}
+	
+	
+	vTaskDelete(NULL);
+}
+//
+
 int main() {
+	
+	hal_create(LED_TASK_PRIORITY);
+	lora_driver_create(ser_USART1);
 	stdioCreate(0);
 	sei();
 	DDRC = 0xFF;
@@ -145,7 +194,9 @@ int main() {
 	xTaskCreate(co2SensorTask, "CO2 measurement", configMINIMAL_STACK_SIZE, NULL, CO2_TASK_PRIORITY, &co2SensorHandle);
 	xTaskCreate(lightSensorTask, "Light measurement", configMINIMAL_STACK_SIZE, NULL, LIGHT_TASK_PRIORITY, &lightSensorHandle);
 	xTaskCreate(waterTask, "Water servo", configMINIMAL_STACK_SIZE, NULL, WATER_TASK_PRIORITY, &WaterHandle);
-
+	//added:
+	xTaskCreate(settingLoraTask, "Led", configMINIMAL_STACK_SIZE, NULL,LED_TASK_PRIORITY, &ledHandle);
+	//
 	stdioCreate(0);
 	sei();
 	//setup temperature/humidity sensor
