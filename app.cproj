@@ -59,7 +59,7 @@
     <com_atmel_avrdbg_tool_atmelice>
       <ToolOptions>
         <InterfaceProperties>
-          <JtagDbgClock>200000</JtagDbgClock>
+          <JtagDbgClock>1200000</JtagDbgClock>
           <JtagEnableExtResetOnStartSession>false</JtagEnableExtResetOnStartSession>
           <JtagInChain>true</JtagInChain>
           <JtagDevicesBefore>0</JtagDevicesBefore>
@@ -75,7 +75,7 @@
       <ToolNumber>J41800072819</ToolNumber>
       <ToolName>Atmel-ICE</ToolName>
     </com_atmel_avrdbg_tool_atmelice>
-    <avrtoolinterfaceclock>200000</avrtoolinterfaceclock>
+    <avrtoolinterfaceclock>1200000</avrtoolinterfaceclock>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>
@@ -171,7 +171,7 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="e_LoRa_return_code_t.h">
+    <Compile Include="LoRa_files\e_LoRa_return_code_t.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="main.c">
@@ -278,6 +278,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="LoRa_files" />
     <Folder Include="VIA_FreeRTOS_AVRMEGA-master\" />
     <Folder Include="VIA_FreeRTOS_AVRMEGA-master\Example\" />
     <Folder Include="VIA_FreeRTOS_AVRMEGA-master\FreeRTOSTraceDriver\" />

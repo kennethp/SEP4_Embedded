@@ -21,14 +21,15 @@
 #include <ihal.h>
 #include <lora_driver.h>
 
-#define LED_TASK_PRIORITY   (tskIDLE_PRIORITY + 5)
+//highest priority
+#define LED_TASK_PRIORITY   (configMAX_PRIORITIES - 1)
 #define LORA_appEUI ""
 #define LORA_appKEY ""
 //
-#define TEMP_TASK_PRIORITY (tskIDLE_PRIORITY + 5)
-#define CO2_TASK_PRIORITY (tskIDLE_PRIORITY + 5)
-#define LIGHT_TASK_PRIORITY (tskIDLE_PRIORITY + 5)
-#define WATER_TASK_PRIORITY (tskIDLE_PRIORITY + 5)
+#define TEMP_TASK_PRIORITY (configMAX_PRIORITIES - 3)
+#define CO2_TASK_PRIORITY (configMAX_PRIORITIES - 3)
+#define LIGHT_TASK_PRIORITY (configMAX_PRIORITIES - 3)
+#define WATER_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 
 
 TaskHandle_t tempSensorHandle = NULL;
@@ -36,42 +37,35 @@ TaskHandle_t co2SensorHandle = NULL;
 TaskHandle_t lightSensorHandle = NULL;
 TaskHandle_t WaterHandle = NULL;
 //add:
-TaskHandle_t ledHandle = NULL;//
+TaskHandle_t loRaWanHandle = NULL;//
 
 int temperature;
 int humidity;
 uint16_t co2;
 float light;
 int water;
-//added:
-void hal_create(uint8_t led_task_priority);
-void lora_driver_create(e_com_port_t com_port);
-void lora_driver_reset_rn2483(uint8_t state);
-void lora_driver_flush_buffers(void);
 
-
-
-//
+char _out_buff[100];
+ 
 
 void tempSensorTask(void* pvParameters) {
 	(void)pvParameters;
 	
 	//Do temperature measurement
 	while(1) {
-		_delay_ms(1000);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 		
 		int r = hih8120Wakeup();
 		if(r != HIH8120_OK && r != HIH8120_TWI_BUSY) {
 			printf("temp-wake error: %d\n", r);
 		}
 		
-		_delay_ms(100);
-
+		vTaskDelay(100 / portTICK_PERIOD_MS);
 		r = hih8120Meassure();
 		if(r != HIH8120_OK && r != HIH8120_TWI_BUSY) {
 			printf("Temp-read error: %d\n", r);
 		}
-		_delay_ms(100);
+		vTaskDelay(100 / portTICK_PERIOD_MS);
 
 		humidity = hih8120GetHumidity();
 		temperature = hih8120GetTemperature();
@@ -86,7 +80,7 @@ void co2SensorTask(void *pvParamters) {
 	(void)pvParamters;
 
 	while(1) {
-		_delay_ms(1000);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 
 		int r = mh_z19_take_meassuring();
 		if(r != MHZ19_OK) {
@@ -107,7 +101,7 @@ void lightSensorTask(void* pvParameters) {
 	(void)pvParameters;
 
 	while(1) {
-		_delay_ms(1000);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 		int r = tsl2591FetchData();
 		if(r != TSL2591_OK) {
 			printf("Failed to fetch light data: %d\n", r);
@@ -138,7 +132,7 @@ void waterTask(void* pvParamters) {
 	while(1) {
 		while(water > 0) {
 			//set servo output high
-			_delay_ms(100);
+			vTaskDelay(100 / portTICK_PERIOD_MS);
 			water--;
 		}
 
@@ -151,30 +145,83 @@ void waterTask(void* pvParamters) {
 
 //added:
 
-void lora_driver_get_rn2483_hweui(char dev_eui);
-void settingLoraTask(void* pvParamters){
-UnknownType LoRA_OK;
-	
-	static char dev_eui[17]; // It is static to avoid it to occupy stack space in the task
-	if (lora_driver_get_rn2483_hweui(dev_eui); != LoRA_OK)
-	{
-		printf("something went wrong\n");
-	}
-	else{
-		printf("temp-wake error: %d\n", dev_eui);
+void loRaWanTask(void* pvParamters){	
 
-	}
-	while(1){
-		lora_driver_reset_rn2483(1);
-		vTaskDelay(2);
-		lora_driver_reset_rn2483(0);
-		vTaskDelay(150);
-		lora_driver_flush_buffers();
-	}
+	//for resetting the LoRaWAN hardware.
+	lora_driver_reset_rn2483(1);
+	vTaskDelay(2);
+	lora_driver_reset_rn2483(0);
+	vTaskDelay(150);
+	lora_driver_flush_buffers();
 	
+	_loRa_setup();
+	
+	lora_payload_t _uplink_payload;
+	
+	_uplink_payload.len = 6;
+	_uplink_payload.port_no = 2;
+	
+		
+	while(1){
+		
+		vTaskDelay(pdMS_TO_TICKS(5000UL));
+		
+	
+	}
 	
 	vTaskDelete(NULL);
 }
+
+void _loRa_setup(void){
+	
+	e_LoRa_return_code_t rc;
+	
+	
+	//For factory reset.
+	printf("FactoryRest >%s<\n", 
+	lora_driver_map_return_code_to_text(lora_driver_rn2483_factory_reset()));
+	
+	//Configure to EU868 LoRaWAN standards.
+	printf("Configure to EU868 >%s<\n", 
+	lora_driver_map_return_code_to_text(lora_driver_configure_to_eu868()));
+	
+	//Get the transceivers HW EUI
+	rc = lora_driver_get_rn2483_hweui(_out_buff);
+	printf("Get HWEUI: %s >%s< \n", lora_driver_map_return_code_to_text(rc), _out_buff );
+	
+	
+	// Set the HWEUI as DevEUI in the LoRaWAN software stack in the transceiver
+	printf("Set DevEUI: %s >%s<\n", _out_buff, lora_driver_map_return_code_to_text(lora_driver_set_device_identifier(_out_buff)));
+
+	// Set Over The Air Activation parameters to be ready to join the LoRaWAN
+	printf("Set OTAA Identity appEUI:%s appKEY:%s devEUI:%s >%s<\n", LORA_appEUI, LORA_appKEY, _out_buff, lora_driver_map_return_code_to_text(lora_driver_set_otaa_identity(LORA_appEUI,LORA_appKEY,_out_buff)));
+
+	// Save all the MAC settings in the transceiver
+	printf("Save mac >%s<\n",lora_driver_map_return_code_to_text(lora_driver_save_mac()));
+
+	// Enable Adaptive Data Rate
+	printf("Set Adaptive Data Rate: ON >%s<\n", lora_driver_map_return_code_to_text(lora_driver_set_adaptive_data_rate(LoRa_ON)));
+
+	// Join the LoRaWAN
+	uint8_t maxJoinTriesLeft = 5;
+	do {
+		rc = lora_driver_join(LoRa_OTAA);
+		printf("Join Network TriesLeft:%d >%s<\n", maxJoinTriesLeft, lora_driver_map_return_code_to_text(rc));
+
+		if ( rc != LoRa_ACCEPTED)
+		{
+			// Make the red led pulse to tell something went wrong
+			// Wait 5 sec and lets try again
+			vTaskDelay(pdMS_TO_TICKS(5000UL));
+		}
+		else
+		{
+			break;
+		}
+	} while (--maxJoinTriesLeft);
+
+}
+	
 //
 
 int main() {
@@ -186,16 +233,13 @@ int main() {
 	DDRC = 0xFF;
 	_delay_ms(50);
 	PORTC = 0x01;
-	while(1) {
-		_delay_ms(500);
-		printf("Running PORTC\n");
-	}
+	
 	xTaskCreate(tempSensorTask, "Temperature measurement", configMINIMAL_STACK_SIZE, NULL, TEMP_TASK_PRIORITY, &tempSensorHandle);
 	xTaskCreate(co2SensorTask, "CO2 measurement", configMINIMAL_STACK_SIZE, NULL, CO2_TASK_PRIORITY, &co2SensorHandle);
 	xTaskCreate(lightSensorTask, "Light measurement", configMINIMAL_STACK_SIZE, NULL, LIGHT_TASK_PRIORITY, &lightSensorHandle);
 	xTaskCreate(waterTask, "Water servo", configMINIMAL_STACK_SIZE, NULL, WATER_TASK_PRIORITY, &WaterHandle);
 	//added:
-	xTaskCreate(settingLoraTask, "Led", configMINIMAL_STACK_SIZE, NULL,LED_TASK_PRIORITY, &ledHandle);
+	xTaskCreate(loRaWanTask, "Led", configMINIMAL_STACK_SIZE, NULL,LED_TASK_PRIORITY, &loRaWanHandle);
 	//
 	stdioCreate(0);
 	sei();

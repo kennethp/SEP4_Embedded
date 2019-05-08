@@ -33,6 +33,7 @@ LINKER_SCRIPT_DEP:=
 
 # Every subdirectory with source files must be described here
 SUBDIRS :=  \
+../LoRa_files \
 ../VIA_FreeRTOS_AVRMEGA-master/ \
 ../VIA_FreeRTOS_AVRMEGA-master/Example/ \
 ../VIA_FreeRTOS_AVRMEGA-master/FreeRTOSTraceDriver/ \
