@@ -20,7 +20,9 @@
 //added
 #include <ihal.h>
 #include <lora_driver.h>
-#include "plantdata.h"
+#include "Plantdata.h"
+//servo
+#include "rcServo.h"
 
 //highest priority
 #define LED_TASK_PRIORITY   (configMAX_PRIORITIES - 1)
@@ -31,19 +33,22 @@
 #define CO2_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 #define LIGHT_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 #define WATER_TASK_PRIORITY (configMAX_PRIORITIES - 3)
+#define SERVO_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 
 
 TaskHandle_t tempSensorHandle = NULL;
 TaskHandle_t co2SensorHandle = NULL;
 TaskHandle_t lightSensorHandle = NULL;
 TaskHandle_t WaterHandle = NULL;
+TaskHandle_t ServoMotorHandle = NULL;
 //add:
 TaskHandle_t loRaWanHandle = NULL;
 SemaphoreHandle_t semaphore = NULL;
 //
 
 
-plantdata data;
+Plantdata plantdata;
+char _out_buff[100];
 
 
 //this is the connection keys.
@@ -68,13 +73,13 @@ void tempSensorTask(void* pvParameters) {
 		}
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 		///////////////////semaphore:
-		if(xSemaphoreTake(semaphore, (TickType_t) 10){
+		xSemaphoreTake(semaphore, portMAX_DELAY);
 			plantdata.humidity = hih8120GetHumidity();
 			plantdata.temperature = hih8120GetTemperature();
 			printf("Hum: %d  Temp: %d\n", plantdata.humidity, plantdata.temperature);
 			
-		}
-)
+		xSemaphoreGive(semaphore);
+
 		}
 
 	
@@ -99,10 +104,11 @@ void co2SensorTask(void *pvParamters) {
 
 void co2Callback(uint16_t ppm) {
 	///////////////////semaphore:
-		if(xSemaphoreTake(semaphore, (TickType_t) 10){
+		xSemaphoreTake(semaphore, portMAX_DELAY);
 			plantdata.co2 = ppm;
 			printf("CO2 level: %u\n", ppm);
-		}
+		
+		xSemaphoreGive(semaphore);
 }
 
 void lightSensorTask(void* pvParameters) {
@@ -129,14 +135,15 @@ void lightCallback(tsl2591ReturnCode_t rc) {
 	if(TSL2591_OK == tsl2591GetLux(&measure)) {
 		
 		///////////////////semaphore:
-		if(xSemaphoreTake(semaphore, (TickType_t) 10){
+		xSemaphoreTake(semaphore, portMAX_DELAY);
 		plantdata.light = measure;
-		printf("Light: %d\n", (uint16_t) measure);
-		}
+		printf("Light: %d\n", (uint16_t) measure);	
+		xSemaphoreGive(semaphore);
 	}
 	else {
 		printf("Lux overflow\n");
 	}
+	
 }
 
 void waterTask(void* pvParamters) {
@@ -147,15 +154,25 @@ void waterTask(void* pvParamters) {
 			//set servo output high
 			vTaskDelay(100 / portTICK_PERIOD_MS);
 			///////////////////semaphore:
-			if(xSemaphoreTake(semaphore, (TickType_t) 10){
+			xSemaphoreTake(semaphore, portMAX_DELAY);
 			plantdata.water--;
-			}
+			xSemaphoreGive(semaphore);
 		}
 
 		//set servo output low
 	}
 
 	vTaskDelete(NULL);
+}
+
+void servoMotorTask(void* pvParamters){
+	(void)pvParamters;
+	
+	while(1){
+		rcServoSet(0,100);
+		vTaskDelay(pdMS_TO_TICKS(10000));
+		//rcServoSet(0,-100);
+	}
 }
 
 
@@ -228,14 +245,14 @@ void loRaWanTask(void* pvParamters){
 	lora_payload_t _uplink_payload;
 	
 	_uplink_payload.len = 6;
-	_uplink_payload.port_no = 5;
+	_uplink_payload.port_no = 2;
 	
 	
 	while(1){
 		
 		vTaskDelay(pdMS_TO_TICKS(5000UL));
 		///////////////////semaphore:
-		if(xSemaphoreTake(semaphore, (TickType_t) 10){
+		xSemaphoreTake(semaphore, portMAX_DELAY);
 		_uplink_payload.bytes[0] = plantdata.humidity;
 		_uplink_payload.bytes[1] = plantdata.temperature;
 		_uplink_payload.bytes[2] = plantdata.co2 >> 8;
@@ -244,7 +261,7 @@ void loRaWanTask(void* pvParamters){
 		_uplink_payload.bytes[5] = plantdata.water;
 		
 		printf("Upload Message >%s<\n", lora_driver_map_return_code_to_text(lora_driver_sent_upload_message(false, &_uplink_payload)));
-		}
+		
 	}
 	
 	vTaskDelete(NULL);
@@ -263,10 +280,10 @@ int main() {
 	xTaskCreate(tempSensorTask, "Temperature measurement", configMINIMAL_STACK_SIZE, NULL, TEMP_TASK_PRIORITY, &tempSensorHandle);
 	xTaskCreate(co2SensorTask, "CO2 measurement", configMINIMAL_STACK_SIZE, NULL, CO2_TASK_PRIORITY, &co2SensorHandle);
 	xTaskCreate(lightSensorTask, "Light measurement", configMINIMAL_STACK_SIZE, NULL, LIGHT_TASK_PRIORITY, &lightSensorHandle);
-	xTaskCreate(waterTask, "Water servo", configMINIMAL_STACK_SIZE, NULL, WATER_TASK_PRIORITY, &WaterHandle);
 	semaphore = xSemaphoreCreateMutex();
 	//added:
 	xTaskCreate(loRaWanTask, "Led", configMINIMAL_STACK_SIZE, NULL,LED_TASK_PRIORITY, &loRaWanHandle);
+	xTaskCreate(servoMotorTask, "Servo Motor", configMINIMAL_STACK_SIZE, NULL, SERVO_TASK_PRIORITY,&ServoMotorHandle);
 	//
 	stdioCreate(0);
 	sei();
@@ -275,6 +292,8 @@ int main() {
 		printf("Failed to initialize temperature sensor\n");
 		return 1;
 	}
+	//setup servoMotor
+	rcServoCreate();
 
 	//setup co2 sensor
 	mh_z19_create(ser_USART3, co2Callback);

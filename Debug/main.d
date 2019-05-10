@@ -39,7 +39,9 @@ main.d main.o: .././main.c \
  ../VIA_FreeRTOS_AVRMEGA-master/src/tsl2591.h \
  ../VIA_FreeRTOS_AVRMEGA-master/src/ihal.h \
  ../VIA_FreeRTOS_AVRMEGA-master/src/lora_driver.h \
- ../VIA_FreeRTOS_AVRMEGA-master/src/serial.h
+ ../VIA_FreeRTOS_AVRMEGA-master/src/serial.h \
+ ../VIA_FreeRTOS_AVRMEGA-master/src/Plantdata.h \
+ ../VIA_FreeRTOS_AVRMEGA-master/src/rcServo.h
 
 ../VIA_FreeRTOS_AVRMEGA-master/src/ATMEGA_FreeRTOS.h:
 
@@ -122,3 +124,7 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\
 ../VIA_FreeRTOS_AVRMEGA-master/src/lora_driver.h:
 
 ../VIA_FreeRTOS_AVRMEGA-master/src/serial.h:
+
+../VIA_FreeRTOS_AVRMEGA-master/src/Plantdata.h:
+
+../VIA_FreeRTOS_AVRMEGA-master/src/rcServo.h:

@@ -225,6 +225,9 @@
     <Compile Include="VIA_FreeRTOS_AVRMEGA-master\src\mpu_wrappers.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="VIA_FreeRTOS_AVRMEGA-master\src\plantdata.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="VIA_FreeRTOS_AVRMEGA-master\src\port.c">
       <SubType>compile</SubType>
     </Compile>
@@ -274,9 +277,6 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="VIA_FreeRTOS_AVRMEGA-master\src\variantHooks.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="VIA_FreeRTOS_AVRMEGA-master\plantdata.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
