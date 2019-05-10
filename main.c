@@ -20,6 +20,7 @@
 //added
 #include <ihal.h>
 #include <lora_driver.h>
+#include "plantdata.h"
 
 //highest priority
 #define LED_TASK_PRIORITY   (configMAX_PRIORITIES - 1)
@@ -37,15 +38,13 @@ TaskHandle_t co2SensorHandle = NULL;
 TaskHandle_t lightSensorHandle = NULL;
 TaskHandle_t WaterHandle = NULL;
 //add:
-TaskHandle_t loRaWanHandle = NULL;//
+TaskHandle_t loRaWanHandle = NULL;
+SemaphoreHandle_t semaphore = NULL;
+//
 
-int temperature;
-int humidity;
-uint16_t co2;
-float light;
-int water;
 
-char _out_buff[100];
+plantdata data;
+
 
 //this is the connection keys.
  
@@ -68,11 +67,15 @@ void tempSensorTask(void* pvParameters) {
 			printf("Temp-read error: %d\n", r);
 		}
 		vTaskDelay(100 / portTICK_PERIOD_MS);
-
-		humidity = hih8120GetHumidity();
-		temperature = hih8120GetTemperature();
-		printf("Hum: %d  Temp: %d\n", humidity, temperature);
-	}
+		///////////////////semaphore:
+		if(xSemaphoreTake(semaphore, (TickType_t) 10){
+			plantdata.humidity = hih8120GetHumidity();
+			plantdata.temperature = hih8120GetTemperature();
+			printf("Hum: %d  Temp: %d\n", plantdata.humidity, plantdata.temperature);
+			
+		}
+)
+		}
 
 	
 	vTaskDelete(NULL);
@@ -83,10 +86,10 @@ void co2SensorTask(void *pvParamters) {
 
 	while(1) {
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
-
 		int r = mh_z19_take_meassuring();
 		if(r != MHZ19_OK) {
 			printf("CO2 sensor: %d", r);
+		
 		}
 	}
 
@@ -95,8 +98,11 @@ void co2SensorTask(void *pvParamters) {
 }
 
 void co2Callback(uint16_t ppm) {
-	co2 = ppm;
-	printf("CO2 level: %u\n", ppm);
+	///////////////////semaphore:
+		if(xSemaphoreTake(semaphore, (TickType_t) 10){
+			plantdata.co2 = ppm;
+			printf("CO2 level: %u\n", ppm);
+		}
 }
 
 void lightSensorTask(void* pvParameters) {
@@ -107,6 +113,7 @@ void lightSensorTask(void* pvParameters) {
 		int r = tsl2591FetchData();
 		if(r != TSL2591_OK) {
 			printf("Failed to fetch light data: %d\n", r);
+		
 		}
 	}
 
@@ -120,8 +127,12 @@ void lightCallback(tsl2591ReturnCode_t rc) {
 		return;
 	}
 	if(TSL2591_OK == tsl2591GetLux(&measure)) {
-		light = measure;
+		
+		///////////////////semaphore:
+		if(xSemaphoreTake(semaphore, (TickType_t) 10){
+		plantdata.light = measure;
 		printf("Light: %d\n", (uint16_t) measure);
+		}
 	}
 	else {
 		printf("Lux overflow\n");
@@ -132,10 +143,13 @@ void waterTask(void* pvParamters) {
 	(void)pvParamters;
 
 	while(1) {
-		while(water > 0) {
+		while(plantdata.water > 0) {
 			//set servo output high
 			vTaskDelay(100 / portTICK_PERIOD_MS);
-			water--;
+			///////////////////semaphore:
+			if(xSemaphoreTake(semaphore, (TickType_t) 10){
+			plantdata.water--;
+			}
 		}
 
 		//set servo output low
@@ -220,16 +234,17 @@ void loRaWanTask(void* pvParamters){
 	while(1){
 		
 		vTaskDelay(pdMS_TO_TICKS(5000UL));
-		
-		_uplink_payload.bytes[0] = humidity;
-		_uplink_payload.bytes[1] = temperature;
-		_uplink_payload.bytes[2] = co2 >> 8;
-		_uplink_payload.bytes[3] = co2 & 0xFF;
-		_uplink_payload.bytes[4] = light;
-		_uplink_payload.bytes[5] = water;
+		///////////////////semaphore:
+		if(xSemaphoreTake(semaphore, (TickType_t) 10){
+		_uplink_payload.bytes[0] = plantdata.humidity;
+		_uplink_payload.bytes[1] = plantdata.temperature;
+		_uplink_payload.bytes[2] = plantdata.co2 >> 8;
+		_uplink_payload.bytes[3] = plantdata.co2 & 0xFF;
+		_uplink_payload.bytes[4] = plantdata.light;
+		_uplink_payload.bytes[5] = plantdata.water;
 		
 		printf("Upload Message >%s<\n", lora_driver_map_return_code_to_text(lora_driver_sent_upload_message(false, &_uplink_payload)));
-		
+		}
 	}
 	
 	vTaskDelete(NULL);
@@ -249,7 +264,7 @@ int main() {
 	xTaskCreate(co2SensorTask, "CO2 measurement", configMINIMAL_STACK_SIZE, NULL, CO2_TASK_PRIORITY, &co2SensorHandle);
 	xTaskCreate(lightSensorTask, "Light measurement", configMINIMAL_STACK_SIZE, NULL, LIGHT_TASK_PRIORITY, &lightSensorHandle);
 	xTaskCreate(waterTask, "Water servo", configMINIMAL_STACK_SIZE, NULL, WATER_TASK_PRIORITY, &WaterHandle);
-	
+	semaphore = xSemaphoreCreateMutex();
 	//added:
 	xTaskCreate(loRaWanTask, "Led", configMINIMAL_STACK_SIZE, NULL,LED_TASK_PRIORITY, &loRaWanHandle);
 	//

@@ -276,6 +276,9 @@
     <Compile Include="VIA_FreeRTOS_AVRMEGA-master\src\variantHooks.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="VIA_FreeRTOS_AVRMEGA-master\plantdata.h">
+      <SubType>compile</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="LoRa_files" />
