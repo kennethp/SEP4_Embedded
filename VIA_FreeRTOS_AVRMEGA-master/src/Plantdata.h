@@ -4,7 +4,12 @@
  *
  * Created: 09/05/2019 11:55:20
  *  Author: Batiste
- */ 
+ */
+#include <semphr.h>
+
+#ifndef SharedRes
+#define SharedRes
+
 typedef struct Plantdata{
 	int temperature;
 	int humidity;
@@ -12,3 +17,11 @@ typedef struct Plantdata{
 	uint16_t light;
 	int water;
 	}Plantdata;
+	
+Plantdata plantdata;
+
+SemaphoreHandle_t semaphore;
+
+TickType_t lastWateringTime;
+
+#endif

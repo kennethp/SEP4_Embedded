@@ -177,6 +177,36 @@
     <Compile Include="main.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="tasks\CO2_sensor.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="tasks\CO2_sensor.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="tasks\light_sensor.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="tasks\light_sensor.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="tasks\LoRaWAN.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="tasks\LoRaWAN.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="tasks\servo_motor.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="tasks\servo_motor.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="tasks\temp_sensor.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="tasks\temp_sensor.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="VIA_FreeRTOS_AVRMEGA-master\FreeRTOSTraceDriver\FreeRTOSTraceDriver.c">
       <SubType>compile</SubType>
     </Compile>
@@ -282,6 +312,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="LoRa_files" />
+    <Folder Include="tasks" />
     <Folder Include="VIA_FreeRTOS_AVRMEGA-master\" />
     <Folder Include="VIA_FreeRTOS_AVRMEGA-master\Example\" />
     <Folder Include="VIA_FreeRTOS_AVRMEGA-master\FreeRTOSTraceDriver\" />

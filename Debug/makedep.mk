@@ -4,6 +4,16 @@
 
 main.c
 
+tasks\CO2_sensor.c
+
+tasks\light_sensor.c
+
+tasks\LoRaWAN.c
+
+tasks\servo_motor.c
+
+tasks\temp_sensor.c
+
 VIA_FreeRTOS_AVRMEGA-master\FreeRTOSTraceDriver\FreeRTOSTraceDriver.c
 
 VIA_FreeRTOS_AVRMEGA-master\src\croutine.c
