@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdio_driver.h>
 #include <semphr.h>
+#include <task.h>
 #include <serial/serial.h>
 #include "hih8120.h"
 #include "mh_z19.h"
@@ -35,6 +36,10 @@
 #define WATER_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 #define SERVO_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 
+///////////////////
+///Tick Speed 62///
+///////////////////
+
 
 TaskHandle_t tempSensorHandle = NULL;
 TaskHandle_t co2SensorHandle = NULL;
@@ -48,7 +53,9 @@ SemaphoreHandle_t semaphore = NULL;
 
 
 Plantdata plantdata;
+TickType_t lastWateringTime;
 char _out_buff[100];
+
 
 
 //this is the connection keys.
@@ -56,22 +63,24 @@ char _out_buff[100];
 
 void tempSensorTask(void* pvParameters) {
 	(void)pvParameters;
-	
+	printf("Temp sensor start!!!\n");
+	printf("tick %d", configTICK_RATE_HZ);
+	 
 	//Do temperature measurement
 	while(1) {
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		vTaskDelay(1000);
 		
 		int r = hih8120Wakeup();
 		if(r != HIH8120_OK && r != HIH8120_TWI_BUSY) {
 			printf("temp-wake error: %d\n", r);
 		}
 		
-		vTaskDelay(100 / portTICK_PERIOD_MS);
+		vTaskDelay(100);
 		r = hih8120Meassure();
 		if(r != HIH8120_OK && r != HIH8120_TWI_BUSY) {
 			printf("Temp-read error: %d\n", r);
 		}
-		vTaskDelay(100 / portTICK_PERIOD_MS);
+		vTaskDelay(100);
 		///////////////////semaphore:
 		xSemaphoreTake(semaphore, portMAX_DELAY);
 			plantdata.humidity = hih8120GetHumidity();
@@ -88,9 +97,10 @@ void tempSensorTask(void* pvParameters) {
 
 void co2SensorTask(void *pvParamters) {
 	(void)pvParamters;
+	printf("Temp sensor start!!!\n");
 
 	while(1) {
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		vTaskDelay(1000);
 		int r = mh_z19_take_meassuring();
 		if(r != MHZ19_OK) {
 			printf("CO2 sensor: %d", r);
@@ -113,9 +123,10 @@ void co2Callback(uint16_t ppm) {
 
 void lightSensorTask(void* pvParameters) {
 	(void)pvParameters;
+	printf("Light sensor start!!!\n");
 
 	while(1) {
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		vTaskDelay(1000);
 		int r = tsl2591FetchData();
 		if(r != TSL2591_OK) {
 			printf("Failed to fetch light data: %d\n", r);
@@ -136,7 +147,7 @@ void lightCallback(tsl2591ReturnCode_t rc) {
 		
 		///////////////////semaphore:
 		xSemaphoreTake(semaphore, portMAX_DELAY);
-		plantdata.light = measure;
+		plantdata.light = (uint16_t) measure;
 		printf("Light: %d\n", (uint16_t) measure);	
 		xSemaphoreGive(semaphore);
 	}
@@ -146,32 +157,18 @@ void lightCallback(tsl2591ReturnCode_t rc) {
 	
 }
 
-void waterTask(void* pvParamters) {
-	(void)pvParamters;
-
-	while(1) {
-		while(plantdata.water > 0) {
-			//set servo output high
-			vTaskDelay(100 / portTICK_PERIOD_MS);
-			///////////////////semaphore:
-			xSemaphoreTake(semaphore, portMAX_DELAY);
-			plantdata.water--;
-			xSemaphoreGive(semaphore);
-		}
-
-		//set servo output low
-	}
-
-	vTaskDelete(NULL);
-}
-
 void servoMotorTask(void* pvParamters){
 	(void)pvParamters;
+	TickType_t waterInterval = (lastWateringTime + 10000);
 	
 	while(1){
-		rcServoSet(0,100);
-		vTaskDelay(pdMS_TO_TICKS(10000));
-		//rcServoSet(0,-100);
+		if(xTaskGetTickCount() >= waterInterval){
+			rcServoSet(0,100);
+			lastWateringTime = xTaskGetTickCount();
+			printf("Plant has been watered!!!!");
+			vTaskDelay(100);
+		}
+		vTaskDelay(1000);
 	}
 }
 
@@ -215,54 +212,49 @@ void _loRa_setup(void){
 	do {
 		rc = lora_driver_join(LoRa_OTAA);
 		printf("Join Network TriesLeft:%d >%s<\n", maxJoinTriesLeft, lora_driver_map_return_code_to_text(rc));
-
-		if ( rc != LoRa_ACCEPTED)
-		{
-			// Make the red led pulse to tell something went wrong
-			// Wait 5 sec and lets try again
-			vTaskDelay(pdMS_TO_TICKS(5000UL));
-		}
-		else
-		{
+		if ( rc == LoRa_ACCEPTED){
 			break;
 		}
+
 	} while (--maxJoinTriesLeft);
 
 }
 
 void loRaWanTask(void* pvParamters){
+	(void)pvParamters;
 
 	//for resetting the LoRaWAN hardware.
+	printf("HALLO THERE\n");
 	lora_driver_reset_rn2483(1);
-	vTaskDelay(2);
+	vTaskDelay(150);
 	lora_driver_reset_rn2483(0);
 	vTaskDelay(150);
 	lora_driver_flush_buffers();
 	
 	_loRa_setup();
-	vTaskDelay(pdMS_TO_TICKS(200UL));
+	vTaskDelay(200);
 	
 	lora_payload_t _uplink_payload;
 	
-	_uplink_payload.len = 6;
+	_uplink_payload.len = 7;
 	_uplink_payload.port_no = 2;
 	
 	
 	while(1){
 		
-		vTaskDelay(pdMS_TO_TICKS(5000UL));
 		///////////////////semaphore:
 		xSemaphoreTake(semaphore, portMAX_DELAY);
 		_uplink_payload.bytes[0] = plantdata.humidity;
 		_uplink_payload.bytes[1] = plantdata.temperature;
 		_uplink_payload.bytes[2] = plantdata.co2 >> 8;
 		_uplink_payload.bytes[3] = plantdata.co2 & 0xFF;
-		_uplink_payload.bytes[4] = plantdata.light;
-		_uplink_payload.bytes[5] = plantdata.water;
+		_uplink_payload.bytes[4] = plantdata.light >> 8;
+		_uplink_payload.bytes[5] = plantdata.light& 0xFF;
+		_uplink_payload.bytes[6] = plantdata.water;
 		
 		printf("Upload Message >%s<\n", lora_driver_map_return_code_to_text(lora_driver_sent_upload_message(false, &_uplink_payload)));
-		
-	}
+		vTaskDelay(1000);
+	};
 	
 	vTaskDelete(NULL);
 }
@@ -274,19 +266,17 @@ int main() {
 	hal_create(LED_TASK_PRIORITY);
 	lora_driver_create(ser_USART1);
 	stdioCreate(0);
-	sei();
 
 	
 	xTaskCreate(tempSensorTask, "Temperature measurement", configMINIMAL_STACK_SIZE, NULL, TEMP_TASK_PRIORITY, &tempSensorHandle);
-	xTaskCreate(co2SensorTask, "CO2 measurement", configMINIMAL_STACK_SIZE, NULL, CO2_TASK_PRIORITY, &co2SensorHandle);
-	xTaskCreate(lightSensorTask, "Light measurement", configMINIMAL_STACK_SIZE, NULL, LIGHT_TASK_PRIORITY, &lightSensorHandle);
+	//xTaskCreate(co2SensorTask, "CO2 measurement", configMINIMAL_STACK_SIZE, NULL, CO2_TASK_PRIORITY, &co2SensorHandle);
+	//xTaskCreate(lightSensorTask, "Light measurement", configMINIMAL_STACK_SIZE, NULL, LIGHT_TASK_PRIORITY, &lightSensorHandle);
 	semaphore = xSemaphoreCreateMutex();
 	//added:
 	xTaskCreate(loRaWanTask, "Led", configMINIMAL_STACK_SIZE, NULL,LED_TASK_PRIORITY, &loRaWanHandle);
-	xTaskCreate(servoMotorTask, "Servo Motor", configMINIMAL_STACK_SIZE, NULL, SERVO_TASK_PRIORITY,&ServoMotorHandle);
+	//xTaskCreate(servoMotorTask, "Servo Motor", configMINIMAL_STACK_SIZE, NULL, SERVO_TASK_PRIORITY,&ServoMotorHandle);
 	//
-	stdioCreate(0);
-	sei();
+	
 	//setup temperature/humidity sensor
 	if(HIH8120_OK != hih8120Create()) {
 		printf("Failed to initialize temperature sensor\n");
