@@ -91,7 +91,7 @@ void loRaWanTask(void* pvParamters){
 		_uplink_payload.bytes[3] = plantdata.co2 & 0xFF;
 		_uplink_payload.bytes[4] = plantdata.light >> 8;
 		_uplink_payload.bytes[5] = plantdata.light& 0xFF;
-		_uplink_payload.bytes[6] = plantdata.water;
+		_uplink_payload.bytes[6] = (xTaskGetTickCount() - plantdata.water) * configTICK_RATE_HZ / 3600000;
 		
 		printf("Upload Message >%s<\n", lora_driver_map_return_code_to_text(lora_driver_sent_upload_message(false, &_uplink_payload)));
 		xSemaphoreGive(semaphore);
