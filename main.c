@@ -40,7 +40,7 @@
 
 //////////////////////////////////////////////////////////////////////////
 
-//setting priority 
+//defining priority 
 #define LED_TASK_PRIORITY   (configMAX_PRIORITIES - 1)
 #define TEMP_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 #define CO2_TASK_PRIORITY (configMAX_PRIORITIES - 3)
@@ -58,9 +58,7 @@ TaskHandle_t loRaWanHandle = NULL;
 
 int main() {
 	
-	//sets the semaphore to null before program start
-	semaphore = NULL;
-	
+	//sets all variables in plantdata to 0.
 	plantdata.co2 = 0;
 	plantdata.humidity = 0;
 	plantdata.light = 0;

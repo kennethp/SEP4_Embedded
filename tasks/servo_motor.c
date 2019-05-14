@@ -17,10 +17,11 @@ void servoMotorTask(void* pvParamters){
 	TickType_t waterInterval = (lastWateringTime + 1000);
 	
 	while(1){
-		vTaskDelay(1000);
+		vTaskDelay(1100);
 			rcServoSet(0,100);
 			lastWateringTime = xTaskGetTickCount();
-			plantdata.water = xTaskGetTickCount();
-			printf("Plant has been watered!!!!\n");
+			plantdata.water = xTaskGetTickCount();	
+			//printf("Plant has been watered!!!!\n");
+		vTaskDelay(9000);
 	}
 }

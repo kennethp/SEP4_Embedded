@@ -24,7 +24,6 @@ void _loRa_setup(void){
 	
 	e_LoRa_return_code_t rc;
 	
-	
 	//For factory reset.
 	printf("FactoryRest >%s<\n",
 	lora_driver_map_return_code_to_text(lora_driver_rn2483_factory_reset()));
@@ -96,7 +95,7 @@ void loRaWanTask(void* pvParamters){
 		
 		printf("Upload Message >%s<\n", lora_driver_map_return_code_to_text(lora_driver_sent_upload_message(false, &_uplink_payload)));
 		xSemaphoreGive(semaphore);
-		vTaskDelay(1000);
+		vTaskDelay(10000);
 		
 	}
 	

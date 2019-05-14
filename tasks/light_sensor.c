@@ -22,6 +22,7 @@ void lightSensorTask(void* pvParameters) {
 		if(r != TSL2591_OK) {
 			printf("Failed to fetch light data: %d\n", r);	
 		}
+		vTaskDelay(9000);
 	}
 
 	vTaskDelete(NULL);
@@ -38,11 +39,11 @@ void lightCallback(tsl2591ReturnCode_t rc) {
 		///////////////////semaphore:
 		xSemaphoreTake(semaphore, portMAX_DELAY);
 		plantdata.light = (uint16_t) measure;
-		printf("Light: %d\n", (uint16_t) measure);
+		//printf("Light: %d\n", (uint16_t) measure);
 		xSemaphoreGive(semaphore);
 	}
 	else {
-		printf("Lux overflow\n");
+		printf("Lux overflow\n");	
 	}
 	
 }

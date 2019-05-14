@@ -14,7 +14,6 @@
 
 void co2SensorTask(void *pvParamters) {
 	(void)pvParamters;
-	printf("Temp sensor start!!!\n");
 
 	while(1) {
 		vTaskDelay(1000);
@@ -22,6 +21,7 @@ void co2SensorTask(void *pvParamters) {
 		if(r != MHZ19_OK) {
 			printf("CO2 sensor: %d", r);			
 		}
+		vTaskDelay(9000);
 	}
 
 	vTaskDelete(NULL);
@@ -31,7 +31,7 @@ void co2Callback(uint16_t ppm) {
 	///////////////////semaphore:
 	xSemaphoreTake(semaphore, portMAX_DELAY);
 	plantdata.co2 = ppm;
-	printf("CO2 level: %u\n", ppm);
+	//printf("CO2 level: %u\n", ppm);
 	
 	xSemaphoreGive(semaphore);
 }
