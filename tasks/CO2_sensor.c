@@ -20,8 +20,7 @@ void co2SensorTask(void *pvParamters) {
 		vTaskDelay(1000);
 		int r = mh_z19_take_meassuring();
 		if(r != MHZ19_OK) {
-			printf("CO2 sensor: %d", r);
-			
+			printf("CO2 sensor: %d", r);			
 		}
 	}
 

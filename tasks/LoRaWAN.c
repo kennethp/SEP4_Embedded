@@ -95,8 +95,10 @@ void loRaWanTask(void* pvParamters){
 		_uplink_payload.bytes[6] = plantdata.water;
 		
 		printf("Upload Message >%s<\n", lora_driver_map_return_code_to_text(lora_driver_sent_upload_message(false, &_uplink_payload)));
+		xSemaphoreGive(semaphore);
 		vTaskDelay(1000);
-	};
+		
+	}
 	
 	vTaskDelete(NULL);
 }

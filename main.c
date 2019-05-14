@@ -4,7 +4,13 @@
  * Created: 05/04/2019 07.51.28
  * Author : kup
  */ 
+///////////////////
+///Tick Speed 62///
+///////////////////
 
+//////////////////////////////////////////////////////////////////////////
+
+//library files
 #include <ATMEGA_FreeRTOS.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -14,85 +20,67 @@
 #include <semphr.h>
 #include <task.h>
 #include <serial/serial.h>
+
 //drivers
 #include "hih8120.h"
 #include "mh_z19.h"
 #include "serial/serial.h"
 #include "tsl2591.h"
-//added
-#include <ihal.h>
-#include <lora_driver.h>
+#include "ihal.h"
+#include "lora_driver.h"
 #include "Plantdata.h"
-//servo
 #include "rcServo.h"
 
-
+//header files for tasks
 #include "tasks/CO2_sensor.h"
 #include "tasks/temp_sensor.h"
 #include "tasks/light_sensor.h"
 #include "tasks/servo_motor.h"
 #include "tasks/LoRaWAN.h"
 
-//highest priority
+//////////////////////////////////////////////////////////////////////////
+
+//setting priority 
 #define LED_TASK_PRIORITY   (configMAX_PRIORITIES - 1)
-#define LORA_appEUI "c53e8f9f10801fc4"
-#define LORA_appKEY "018cc25f724a8517cbfd763dc1126614"
-//
 #define TEMP_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 #define CO2_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 #define LIGHT_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 #define WATER_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 #define SERVO_TASK_PRIORITY (configMAX_PRIORITIES - 3)
 
-///////////////////
-///Tick Speed 62///
-///////////////////
-
-
+//task setup
 TaskHandle_t tempSensorHandle = NULL;
 TaskHandle_t co2SensorHandle = NULL;
 TaskHandle_t lightSensorHandle = NULL;
 TaskHandle_t WaterHandle = NULL;
 TaskHandle_t ServoMotorHandle = NULL;
-//add:
 TaskHandle_t loRaWanHandle = NULL;
-//
-
-
-char _out_buff[100];
-
-
-
-//this is the connection keys.
- 
-
-
-
-
-//added:
-
-
-
-
-//
 
 int main() {
 	
+	//sets the semaphore to null before program start
 	semaphore = NULL;
 	
+	plantdata.co2 = 0;
+	plantdata.humidity = 0;
+	plantdata.light = 0;
+	plantdata.temperature = 0;
+	plantdata.water = 0;
+	
+	stdioCreate(0);
+	
+	//setup for loRaWAN
 	hal_create(LED_TASK_PRIORITY);
 	lora_driver_create(ser_USART1);
-	stdioCreate(0);
-
 	
+	//creating tasks
 	xTaskCreate(tempSensorTask, "Temperature measurement", configMINIMAL_STACK_SIZE, NULL, TEMP_TASK_PRIORITY, &tempSensorHandle);
 	xTaskCreate(co2SensorTask, "CO2 measurement", configMINIMAL_STACK_SIZE, NULL, CO2_TASK_PRIORITY, &co2SensorHandle);
 	xTaskCreate(lightSensorTask, "Light measurement", configMINIMAL_STACK_SIZE, NULL, LIGHT_TASK_PRIORITY, &lightSensorHandle);
-	semaphore = xSemaphoreCreateMutex();
-	//added:
 	xTaskCreate(loRaWanTask, "Led", configMINIMAL_STACK_SIZE, NULL,LED_TASK_PRIORITY, &loRaWanHandle);
 	xTaskCreate(servoMotorTask, "Servo Motor", configMINIMAL_STACK_SIZE, NULL, SERVO_TASK_PRIORITY,&ServoMotorHandle);
-	//
+	
+	semaphore = xSemaphoreCreateMutex();
 	
 	//setup temperature/humidity sensor
 	if(HIH8120_OK != hih8120Create()) {
